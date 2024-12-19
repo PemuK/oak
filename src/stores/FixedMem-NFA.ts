@@ -1,18 +1,14 @@
 import { defineStore } from "pinia";
 import { ref, watchEffect } from "vue";
 import worker from "@/types/worker";
-import { ElMessage } from 'element-plus';
-import {useWorkerStoreFixFFA} from "@/stores/Worker-fix-FFA";
+import {useWorkerStoreFixNFA} from "@/stores/Worker-fix-NFA";
 
 export const useFixedMem = defineStore("fixedMem", () => {
     // 从 localStorage 获取数据并解析，如果没有则使用默认值
     const totalMemory = ref<number>(parseInt(localStorage.getItem("totalMemory-fixed") || "1000"));
     const partitions = ref(initializeFixedPartitions());
     const lastAllocation = ref<number>(parseInt(localStorage.getItem('lastAllocation-fixed') || "0"));
-    const workerStore = useWorkerStoreFixFFA();
-    const success=ref(0);
-    const total=ref(0);
-    const splinter=ref(0);
+    const workerStore = useWorkerStoreFixNFA();
 
 
     // 监听 state 变化，更新 localStorage 中的数据
@@ -143,27 +139,36 @@ export const useFixedMem = defineStore("fixedMem", () => {
             // 生成默认分区数据，确保所有分区的 end 最大为 1000
             const defaultPartitions = [
                 // 前 20 个大小为 10 的分区
-                ...Array.from({ length: 10 }, (_, i) => ({
+                ...Array.from({ length: 20 }, (_, i) => ({
                     id: i + 1,
-                    start: i * 50,
-                    end: Math.min((i + 1) * 50 - 1, 999), // 确保 end 不超过 1000
-                    size: 50,  // 每个分区的大小是 50
+                    start: i * 10,
+                    end: Math.min((i + 1) * 10 - 1, 999), // 确保 end 不超过 1000
+                    size: 10,
                     occupiedBy: null,
                 })),
 
-                // 剩下的两个大分区，确保 total end 不超过 1000
+                // 接下来的 20 个大小为 30 的分区
+                ...Array.from({ length: 20 }, (_, i) => ({
+                    id: i + 21,
+                    start: (i + 20) * 30,
+                    end: Math.min((i + 21) * 30 - 1, 999), // 确保 end 不超过 1000
+                    size: 30,
+                    occupiedBy: null,
+                })),
+
+                // 剩下的大分区，确保 total end 不超过 1000
                 {
-                    id: 11,
-                    start: 500,  // 第 11 个分区的 start 从 500 开始
-                    end: Math.min(749, 999), // 确保 end 不超过 1000
-                    size: 250,
+                    id: 41,
+                    start: 600,
+                    end: Math.min(899, 999), // 确保 end 不超过 1000
+                    size: 200,
                     occupiedBy: null,
                 },
                 {
-                    id: 12,
-                    start: 750,  // 第 12 个分区的 start 从 750 开始
-                    end: Math.min(999, 999),  // 确保 end 不超过 1000
-                    size: 250,
+                    id: 42,
+                    start: 800,
+                    end: Math.min(1399, 999), // 确保 end 不超过 1000
+                    size: 200,
                     occupiedBy: null,
                 },
             ];
@@ -194,9 +199,6 @@ export const useFixedMem = defineStore("fixedMem", () => {
         totalMemory,
         partitions,
         lastAllocation,
-        success,
-        total,
-        splinter,
         methods: {
             updateTotalMemory,
             updatePartitionSize,

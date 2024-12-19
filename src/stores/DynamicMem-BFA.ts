@@ -1,23 +1,23 @@
 import {defineStore} from "pinia";
 import {ref, watchEffect} from "vue";
-import {useWorkerStore} from "@/stores/worker";
+import {useWorkerStoreBFA} from "@/stores/Worker-BFA";
 import worker from "@/types/worker";
 
 
 export const useDynamicMem = defineStore(
-    "dynamicMem",
+    "dynamicMem-bnf",
     () => {
         const totalMemory = ref<number>(parseInt(localStorage.getItem('totalMemory') || '1000'));
         const partitions = ref(initializeDynamicPartitions());
         const lastAllocation = ref<number>(parseInt(localStorage.getItem('lastAllocation') || "0"));
-        const workerStore = useWorkerStore();
+        const workerStore = useWorkerStoreBFA();
         const success=ref(0);
         const total=ref(0);
         const splinter=ref(0);
 
         watchEffect(() => {
-            localStorage.setItem('totalMemory', totalMemory.value.toString());
-            localStorage.setItem('dynamicPartitions', JSON.stringify(partitions.value));
+            localStorage.setItem('totalMemory-bnf', totalMemory.value.toString());
+            localStorage.setItem('dynamicPartitions-bnf', JSON.stringify(partitions.value));
 
         });
 
@@ -31,6 +31,13 @@ export const useDynamicMem = defineStore(
                 .sort((a, b) => a.start - b.start);  // 按 start 排序
             return emptyPartitions;  // 返回空闲分区
         };
+        const listEmpPartitionBySize = (): any => {
+            const emptyPartitions = partitions.value
+                .filter(p => p.occupiedBy === null)  // 筛选未占用的分区
+                .sort((a, b) => (b.end - b.start) - (a.end - a.start));  // 按分区大小 (end - start) 排序，降序
+            return emptyPartitions;  // 返回按大小排序的空闲分区
+        };
+
 
 
         const mergePartitions = () => {
@@ -98,8 +105,8 @@ export const useDynamicMem = defineStore(
                 partition.occupiedBy = app;
                 lastAllocation.value = partition.start;
                 splitPartition(partition.start, app.memorySize);
-                localStorage.setItem('dynamicPartitions', JSON.stringify(partitions.value));
-                localStorage.setItem('lastAllocation', lastAllocation.value.toString());
+                localStorage.setItem('dynamicPartitions-bnf', JSON.stringify(partitions.value));
+                localStorage.setItem('lastAllocation-bnf', lastAllocation.value.toString());
                 // 确保 workerStore.activeQueue 中没有重复的任务
                 if (!workerStore.activeQueue.some((p: worker) => p.id === app.id)) {
                     workerStore.activeQueue.push(app);
@@ -135,16 +142,17 @@ export const useDynamicMem = defineStore(
         return {
             totalMemory,
             partitions,
-            splinter,
-            total,
             success,
+            total,
+            splinter,
             methods: {
                 updateTotalMemory,
                 mergePartitions,
                 splitPartition,
                 occupyPartition,
                 releasePartition,
-                listEmpPartitionByStart
+                listEmpPartitionByStart,
+                listEmpPartitionBySize
             }
         };
     }

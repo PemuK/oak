@@ -1,8 +1,9 @@
 <template>
+  <DynamicFFA/>
+  <DynamicNFA/>
+  <DynamicBFA/>
   <FixAllocation/>
-  <DynamicAllocation/>
-  <FixAllocation/>
-  <DynamicAllocation/>
+<!--  <FixAllocationNFA/>-->
 
   <el-button @click="allocate">测试</el-button>
 </template>
@@ -10,26 +11,55 @@
 <script setup lang="ts">
 // import AppSelector from "@/components/AppSelector.vue";
 // import AppShower from "@/components/AppShower.vue";
-import {MemoryAllocator} from "@/utils/allocate";
+import {FfaAllocator} from "@/utils/Allocator-FFA";
+import {NfaAllocator} from "@/utils/Allocator-NFA";
+import {BfaAllocator} from "@/utils/Allocator-BFA";
+
 import FixAllocation from "@/components/FixAllocation.vue";
-import {useFixedMem} from "@/stores/FixedMem";
 import {useWorkerStore} from "@/stores/worker";
+// import {useWorkerStore} from "@/stores/Worker-NFA";
 // import MethodSelector from "@/components/MethodSelector.vue";
-import DynamicAllocation from "@/components/DynamicAllocation.vue";
+import DynamicFFA from "@/components/Dynamic-FFA.vue";
+import DynamicNFA from "@/components/Dynamic-NFA.vue";
+import DynamicBFA from "@/components/Dynamic-BFA.vue";
+import {FfaAllocatorFixed} from "@/utils/Allocator-Fix-FFA";
+import {generateRandomQueue} from "@/utils/util/generateRandomQueue";
+import {useWorkerStoreNFA} from "@/stores/Worker-NFA";
+import {useWorkerStoreBFA} from "@/stores/Worker-BFA";
+import {useWorkerStoreFixFFA} from "@/stores/Worker-fix-FFA";
+import FixAllocationNFA from "@/components/FixAllocation-NFA.vue";
 
-const mem = useFixedMem();
 const workers = useWorkerStore();
-const allocation=new MemoryAllocator(0);
+const workersNFA = useWorkerStoreNFA();
+const workersBFA =useWorkerStoreBFA();
+const workerFixFFA=useWorkerStoreFixFFA();
+const ffaAllocation = new FfaAllocator(0);
 
-console.log("queue==>",workers.workQueue);
+const nfaAllocation = new NfaAllocator(0);
+const bfaAllocator = new BfaAllocator(0);
+const ffaAllocatorFixed = new FfaAllocatorFixed(0);
+console.log("queue==>", workers.workQueue);
 
 // mem.methods.releasePartition(6)
 
-workers.generateRandomQueue(200);
+const apps = generateRandomQueue(500);
 
-const allocate = () => {
-    allocation.FFA();
+workers.generateRandomQueue(apps);
+workersNFA.generateRandomQueue(apps);
+workersBFA.generateRandomQueue(apps);
+workerFixFFA.generateRandomQueue(apps);
+
+
+const allocate = async () => {
+  // 使用 Promise.all 并行执行两个异步操作
+  await Promise.all([
+    ffaAllocation.FFA(),  // 启动 FFA 分配
+    nfaAllocation.NFA(),   // 启动 NFA 分配
+    bfaAllocator.BFA(),
+    ffaAllocatorFixed.FFA()
+  ]);
 }
+
 //
 // const reset = () => {
 //   for (let i = 0; i < 7; i++) {
@@ -58,7 +88,7 @@ const allocate = () => {
 }
 
 .func-box-table {
-  width: 350px;
+  width: 300px;
   margin-top: 10px;
   margin-left: 10px;
   max-height: 190px;
@@ -79,5 +109,17 @@ const allocate = () => {
 
 .aside {
   margin-right: 200px;
+}
+
+.func-box-static{
+  width: 250px;
+  margin-top: 10px;
+  margin-left: 10px;
+  max-height: 190px;
+  overflow: hidden;
+  overflow-y: auto;
+}
+.func-box-static .header{
+  font-size: 15px;
 }
 </style>

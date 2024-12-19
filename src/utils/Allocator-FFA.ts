@@ -4,7 +4,7 @@ import {watch} from "vue";
 import {useWorkerStore} from "@/stores/worker";
 
 // 创建 MemoryAllocator 类
-class MemoryAllocator {
+class FfaAllocator {
     private mem;
     private queue;
 
@@ -59,19 +59,28 @@ class MemoryAllocator {
 
                 // 尝试将任务分配到内存分区
                 for (const partition of emptyPartitions) {
+                    if(partition.end - partition.start<10){
+                        this.mem.splinter++;
+                    }
                     if (partition.end - partition.start >= worker.memorySize) {  // 判断内存分区是否足够
                         partitionAssigned = this.mem.methods.occupyPartition(partition.start, worker);
                         if (partitionAssigned) {
+                            this.mem.total++;
+                            this.mem.success++;
                             break;  // 找到合适的分区后跳出循环
                         }
                     }
                 }
 
-                // 如果没有找到合适的分区，返回分配失败
                 if (!partitionAssigned) {
-                    worker.enterTime = 0;  // 重置进入时间
-                    this.queue.workQueue = this.queue.workQueue.filter(p => p.id !== worker.id);  // 更新 workQueue
-                    if (!this.queue.clogQueue.find(p => p.id === worker.id)) {
+                    worker.enterTime = 0.1;  // 重置进入时间
+
+                    // 更新 workQueue：移除已处理的任务
+                    this.queue.workQueue = this.queue.workQueue.filter(p => p.id !== worker.id);
+                    this.mem.total++;
+
+                    // 检查任务是否已经存在于 clogQueue 中，避免重复添加
+                    if (!this.queue.clogQueue.some(p => p.id === worker.id)) {
                         this.queue.clogQueue.push(worker);  // 将任务重新加入阻塞队列
                         console.log("clogQueue==>", this.queue.clogQueue);
                     }
@@ -92,4 +101,4 @@ class MemoryAllocator {
     }
 }
 
-export {MemoryAllocator};
+export {FfaAllocator};

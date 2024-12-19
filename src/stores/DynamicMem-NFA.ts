@@ -1,24 +1,22 @@
-import {defineStore} from "pinia";
-import {ref, watchEffect} from "vue";
-import {useWorkerStore} from "@/stores/worker";
+import { defineStore } from "pinia";
+import { ref, watchEffect } from "vue";
+import { useWorkerStoreNFA } from "@/stores/Worker-NFA";
 import worker from "@/types/worker";
 
-
 export const useDynamicMem = defineStore(
-    "dynamicMem",
+    "dynamicMem-nfa",
     () => {
-        const totalMemory = ref<number>(parseInt(localStorage.getItem('totalMemory') || '1000'));
+        const totalMemory = ref<number>(parseInt(localStorage.getItem('totalMemory-nfa') || '1000'));
         const partitions = ref(initializeDynamicPartitions());
-        const lastAllocation = ref<number>(parseInt(localStorage.getItem('lastAllocation') || "0"));
-        const workerStore = useWorkerStore();
+        const lastAllocation = ref<number>(parseInt(localStorage.getItem('lastAllocation-nfa') || "0"));
+        const workerStore = useWorkerStoreNFA();
         const success=ref(0);
         const total=ref(0);
         const splinter=ref(0);
 
         watchEffect(() => {
-            localStorage.setItem('totalMemory', totalMemory.value.toString());
-            localStorage.setItem('dynamicPartitions', JSON.stringify(partitions.value));
-
+            localStorage.setItem('totalMemory-nfa', totalMemory.value.toString());
+            localStorage.setItem('dynamicPartitions-nfa', JSON.stringify(partitions.value));
         });
 
         const updateTotalMemory = (newMemory: number) => {
@@ -26,12 +24,11 @@ export const useDynamicMem = defineStore(
         };
 
         const listEmpPartitionByStart = (): any => {
-            const emptyPartitions = partitions.value
+            // 按 start 排序
+            return partitions.value
                 .filter(p => p.occupiedBy === null)  // 筛选未占用的分区
-                .sort((a, b) => a.start - b.start);  // 按 start 排序
-            return emptyPartitions;  // 返回空闲分区
+                .sort((a, b) => a.start - b.start);  // 返回空闲分区
         };
-
 
         const mergePartitions = () => {
             const emptyPartitions = partitions.value
@@ -61,7 +58,6 @@ export const useDynamicMem = defineStore(
                 }
             }
         };
-
 
         const splitPartition = (partitionStart: number, splitSize: number) => {
             const partitionIndex = partitions.value.findIndex(p => p.start === partitionStart);
@@ -98,8 +94,9 @@ export const useDynamicMem = defineStore(
                 partition.occupiedBy = app;
                 lastAllocation.value = partition.start;
                 splitPartition(partition.start, app.memorySize);
-                localStorage.setItem('dynamicPartitions', JSON.stringify(partitions.value));
-                localStorage.setItem('lastAllocation', lastAllocation.value.toString());
+                localStorage.setItem('dynamicPartitions-nfa', JSON.stringify(partitions.value));
+                localStorage.setItem('lastAllocation-nfa', lastAllocation.value.toString());
+
                 // 确保 workerStore.activeQueue 中没有重复的任务
                 if (!workerStore.activeQueue.some((p: worker) => p.id === app.id)) {
                     workerStore.activeQueue.push(app);
@@ -107,8 +104,10 @@ export const useDynamicMem = defineStore(
 
                 // 从 workQueue 中移除任务
                 workerStore.workQueue = workerStore.workQueue.filter((p: worker) => p.id !== app.id);
+
                 console.log("workQueue==>", workerStore.workQueue);
                 console.log("activeQueue==>", workerStore.activeQueue);
+
                 releasePartitionAfterTimeout(partitionStart, app);
                 return true;
             }
@@ -124,20 +123,20 @@ export const useDynamicMem = defineStore(
         };
 
         function initializeDynamicPartitions(): Array<{ start: number; end: number; occupiedBy: worker | null }> {
-            const storedPartitions = JSON.parse(localStorage.getItem('dynamicPartitions') || '[]');
+            const storedPartitions = JSON.parse(localStorage.getItem('dynamicPartitions-nfa') || '[]');
             if (!storedPartitions || storedPartitions.length === 0) {
-                return [{start: 0, end: 1000, occupiedBy: null}];
+                return [{ start: 0, end: 1000, occupiedBy: null }];
             }
             return storedPartitions;
         }
 
-
         return {
             totalMemory,
             partitions,
-            splinter,
-            total,
+            lastAllocation,
             success,
+            total,
+            splinter,
             methods: {
                 updateTotalMemory,
                 mergePartitions,

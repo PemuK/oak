@@ -3,7 +3,7 @@ import {ref} from 'vue';
 import Worker from '@/types/worker';
 import {generateRandomColor} from "@/utils/util/RandomColor";
 
-export const useWorkerStore = defineStore('worker', () => {
+export const useWorkerStoreFixNFA = defineStore('worker-fix-nfa', () => {
     const workQueue = ref<Worker[]>(initWorkerQueue());
     const clogQueue = ref<Worker[]>(initClogQueue());
     const activeQueue=ref<Worker[]>([]);
@@ -13,7 +13,7 @@ export const useWorkerStore = defineStore('worker', () => {
 
         // 尝试从 localStorage 获取工作队列数据
         try {
-            workQueueStorage = JSON.parse(localStorage.getItem('worker-queue') || '[]');
+            workQueueStorage = JSON.parse(localStorage.getItem('worker-queue-fix-nfa') || '[]');
         } catch (e) {
             // 如果解析出错，则返回一个空数组
             workQueueStorage = [];
@@ -33,7 +33,7 @@ export const useWorkerStore = defineStore('worker', () => {
             // 对默认队列按照 enterTime 排序
             defaultQueue.sort((a, b) => a.enterTime - b.enterTime);
 
-            localStorage.setItem('worker-queue', JSON.stringify(defaultQueue));
+            localStorage.setItem('worker-queue-fix-nfa', JSON.stringify(defaultQueue));
             return defaultQueue;
         }
 
@@ -47,7 +47,7 @@ export const useWorkerStore = defineStore('worker', () => {
 
         // 尝试从 localStorage 获取工作队列数据
         try {
-            const storedData = localStorage.getItem('clog-queue');
+            const storedData = localStorage.getItem('clog-queue-fix-nfa');
             if (storedData) {
                 clogQueueStorage = JSON.parse(storedData);
             }
@@ -75,13 +75,13 @@ export const useWorkerStore = defineStore('worker', () => {
         // 按照 enterTime 排序
         workQueue.value.sort((a, b) => a.enterTime - b.enterTime);
 
-        localStorage.setItem('worker-queue', JSON.stringify(workQueue.value));
+        localStorage.setItem('worker-queue-fix-nfa', JSON.stringify(workQueue.value));
     }
 
     // 删除工作队列中的任务
     function removeFromWorkQueue(workerId: number) {
         workQueue.value = workQueue.value.filter(worker => worker.id !== workerId);
-        localStorage.setItem('worker-queue', JSON.stringify(workQueue.value)); // 更新到 localStorage
+        localStorage.setItem('worker-queue-fix-nfa', JSON.stringify(workQueue.value)); // 更新到 localStorage
     }
 
     // 修改工作队列中的任务
@@ -93,20 +93,20 @@ export const useWorkerStore = defineStore('worker', () => {
             if (!updatedWorker.color) {
                 workQueue.value[index].color = workQueue.value[index].color || generateRandomColor();
             }
-            localStorage.setItem('worker-queue', JSON.stringify(workQueue.value));
+            localStorage.setItem('worker-queue-fix-nfa', JSON.stringify(workQueue.value));
         }
     }
 
     // 随机生成一个工作队列
     function generateRandomQueue(apps:Worker[]) {
         workQueue.value = [...apps]; // 将生成的工作队列添加到现有队列中
-        localStorage.setItem('worker-queue', JSON.stringify(workQueue.value)); // 更新到 localStorage
+        localStorage.setItem('worker-queue-fix-nfa', JSON.stringify(workQueue.value)); // 更新到 localStorage
     }
 
     // 更新工作队列
     function updateWorkQueue(updatedQueue: Worker[]) {
         workQueue.value = updatedQueue;
-        localStorage.setItem('worker-queue', JSON.stringify(workQueue.value)); // 更新到 localStorage
+        localStorage.setItem('worker-queue-fix-nfa', JSON.stringify(workQueue.value)); // 更新到 localStorage
     }
 
     function addToClogQueue(worker: Worker) {
@@ -117,7 +117,7 @@ export const useWorkerStore = defineStore('worker', () => {
     function dequeueClogQueue(): Worker | undefined {
         const worker = clogQueue.value.shift();
         if (worker) {
-            localStorage.setItem('clog-queue', JSON.stringify(clogQueue.value));
+            localStorage.setItem('clog-queue-fix-nfa', JSON.stringify(clogQueue.value));
         }
         return worker;
     }

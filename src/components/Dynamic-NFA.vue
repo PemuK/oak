@@ -2,7 +2,7 @@
   <div id="group">
     <el-card class="func-box">
       <div class="header">
-        动态分区
+        动态分区-循环首次适应
       </div>
       <div class="memory-container">
         <div
@@ -41,24 +41,73 @@
         <el-table-column prop="size" label="大小"/>
       </el-table>
     </el-card>
+    <el-card class="func-box-table">
+      <div class="header">
+        活动队列，当前任务数{{workers.activeQueue.length}}个
+      </div>
+      <el-table
+          :data="workers.activeQueue"
+          class="table"
+      >
+        <el-table-column prop="name" label="名称"/>
+        <el-table-column prop="memorySize" label="占用内存"/>
+        <el-table-column prop="runTime" label="运行时间"/>
+      </el-table>
+    </el-card>
+    <el-card class="func-box-table">
+      <div class="header">
+        就绪队列，当前等待数{{workers.workQueue.length}}个
+      </div>
+      <el-table
+          :data="workers.workQueue"
+          class="table"
+      >
+        <el-table-column prop="name" label="名称"/>
+        <el-table-column prop="memorySize" label="占用内存"/>
+        <el-table-column prop="runTime" label="运行时间"/>
+      </el-table>
+    </el-card>
+
+    <el-card class="func-box-table">
+      <div class="header">
+        阻塞队列，当前阻塞数{{workers.clogQueue.length}}个
+      </div>
+      <el-table
+          :data="workers.clogQueue"
+          class="table"
+      >
+        <el-table-column prop="name" label="名称"/>
+        <el-table-column prop="memorySize" label="占用内存"/>
+        <el-table-column prop="runTime" label="运行时间"/>
+      </el-table>
+    </el-card>
+    <el-card class="func-box-static">
+      <div class="header">
+        产生碎片次数 {{ mem.splinter }}
+      </div>
+      <div class="header">
+        分配成功率{{ ((mem.success / mem.total) * 100).toFixed(2) }}%
+      </div>
+      <div class="header">
+        内存利用率 {{ memoryUsage }} %
+      </div>
+    </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import {computed, ref, watchEffect} from "vue";
-import {useWorkerStore} from "@/stores/worker";
-import {useDynamicMem} from "@/stores/DynamicMem";
-import worker from "@/types/worker";
+import {useDynamicMem} from "@/stores/DynamicMem-NFA";
+import {useWorkerStoreNFA} from "@/stores/Worker-NFA";
 
 // 动态切换 Pinia 状态
+// eslint-disable-next-line no-undef
 const dynamicMem = useDynamicMem(); // 初始绑定到固定分区
 const partitions = ref([]);
+const workers=useWorkerStoreNFA();
 const mem = ref(dynamicMem);
 
-
-console.log("dynamicMem==>", mem.value.partitions);
-const workers = useWorkerStore();
-
+console.log("dynamicMemNFA==>", mem.value.partitions);
 
 // 动态监听 mem.value 和 mem.value.partitions 的变化
 watchEffect(() => {
@@ -66,6 +115,7 @@ watchEffect(() => {
     partitions.value = [];
     return;
   }
+  console.log("dynamicMemNFA==>", mem.value.partitions);
 
   // 重新计算每个分区的宽度
   partitions.value = mem.value.partitions.map((partition) => ({
@@ -93,18 +143,23 @@ const occupiedWidth = (partitionStart: number) => {
 };
 
 const nullPartitions = computed(() => {
-  return partitions.value.filter(p => p.occupiedBy === null);
+  return partitions.value
+      .map(partition => ({
+        ...partition,
+        size: partition.end - partition.start, // 计算大小
+      }))
+      .filter(p => p.occupiedBy === null); // 正确使用 filter 返回布尔值
 });
 
-// 假设占用分区操作
-// mem.value.methods.occupyPartition(0, workers.workers[0]);
-// mem.value.methods.occupyPartition(40, workers.workers[4]);
-// mem.value.methods.occupyPartition(190, workers.workers[2]);
+// 计算内存利用率
+const memoryUsage = computed(() => {
+  const totalMemory = partitions.value.reduce((acc, partition) => acc + (partition.end - partition.start), 0);
+  const usedMemory = partitions.value.reduce((acc, partition) => {
+    return acc + (partition.occupiedBy ? (partition.end - partition.start) : 0);
+  }, 0);
+  return totalMemory > 0 ? ((usedMemory / totalMemory) * 100).toFixed(2) : '0';
+});
 
-
-// mem.value.methods.releasePartition(350,400);
-// 释放分区操作
-// mem.value.methods.releasePartition(3);
 </script>
 
 
@@ -176,5 +231,15 @@ const nullPartitions = computed(() => {
 #group {
   display: flex;
   justify-content: flex-start;
+}
+
+.table{
+  min-height: 200px;
+}
+
+.func-box-table{
+  min-height: 200px;
+  overflow: hidden;
+  overflow-y: auto;
 }
 </style>
